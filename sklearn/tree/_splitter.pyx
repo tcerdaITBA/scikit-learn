@@ -397,6 +397,7 @@ cdef class BestSplitter(BaseDenseSplitter):
 
                 if self._is_categorical(current.feature):
                     self.criterion.reset()
+                    current.is_categorical = 1
 
                     for uc in range(0, self.categorical_classes[current.feature]):
                         current.pos = sort_categorical(Xf + start, samples + start, uc, end - start)
@@ -426,6 +427,8 @@ cdef class BestSplitter(BaseDenseSplitter):
 
                 else:
                     sort(Xf + start, samples + start, end - start)
+                    current.is_categorical = 0
+
 
                     if Xf[end - 1] <= Xf[start] + FEATURE_THRESHOLD:
                         features[f_j], features[n_total_constants] = features[n_total_constants], features[f_j]
