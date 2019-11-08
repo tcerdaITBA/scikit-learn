@@ -26,6 +26,7 @@ cdef struct SplitRecord:
     SIZE_t pos             # Split samples array at the given position,
                            # i.e. count of samples below threshold for feature.
                            # pos is >= end if the node is a leaf.
+    bint is_categorical    # indicates whether the feature is categorical or not
     double threshold       # Threshold to split at.
     double improvement     # Impurity improvement given parent node.
     double impurity_left   # Impurity of the left split.
@@ -60,6 +61,8 @@ cdef class Splitter:
     cdef const DOUBLE_t[:, ::1] y
     cdef DOUBLE_t* sample_weight
 
+    cdef SIZE_t* categorical_classes
+
     # The samples vector `samples` is maintained by the Splitter object such
     # that the samples contained in a node are contiguous. With this setting,
     # `node_split` reorganizes the node samples `samples[start:end]` in two
@@ -78,6 +81,7 @@ cdef class Splitter:
 
     # Methods
     cdef int init(self, object X, const DOUBLE_t[:, ::1] y,
+                  SIZE_t* categorical_classes,
                   DOUBLE_t* sample_weight,
                   np.ndarray X_idx_sorted=*) except -1
 
@@ -92,3 +96,5 @@ cdef class Splitter:
     cdef void node_value(self, double* dest) nogil
 
     cdef double node_impurity(self) nogil
+
+    cdef bint _is_categorical(self, SIZE_t feature) nogil

@@ -137,10 +137,15 @@ class BaseDecisionTree(MultiOutputMixin, BaseEstimator, metaclass=ABCMeta):
         check_is_fitted(self)
         return self.tree_.n_leaves
 
-    def fit(self, X, y, sample_weight=None, check_input=True,
+    def fit(self, X, y, categorical_features=None, sample_weight=None, check_input=True,
             X_idx_sorted=None):
 
         random_state = check_random_state(self.random_state)
+
+        categorical_classes = np.zeros(X.shape[1], dtype='int64')
+
+        if categorical_features is None:
+          categorical_features = np.empty(0)  # empty array
 
         if self.ccp_alpha < 0.0:
             raise ValueError("ccp_alpha must be greater than or equal to 0")
@@ -148,12 +153,22 @@ class BaseDecisionTree(MultiOutputMixin, BaseEstimator, metaclass=ABCMeta):
         if check_input:
             X = check_array(X, dtype=DTYPE, accept_sparse="csc")
             y = check_array(y, ensure_2d=False, dtype=None)
+            features = X.shape[1]
+
+            for cf in categorical_features:
+              if cf < 0 or cf >= features:
+                raise ValueError("categorical features must go from 0 to {}".format(str(features - 1)))
+
             if issparse(X):
                 X.sort_indices()
 
                 if X.indices.dtype != np.intc or X.indptr.dtype != np.intc:
                     raise ValueError("No support for np.int64 index based "
                                      "sparse matrices")
+
+        for feature in range(X.shape[1]):
+          if feature in categorical_features:
+            categorical_classes[feature] = np.unique(X[:, feature]).size
 
         # Determine output settings
         n_samples, self.n_features_ = X.shape
@@ -364,7 +379,7 @@ class BaseDecisionTree(MultiOutputMixin, BaseEstimator, metaclass=ABCMeta):
                                            self.min_impurity_decrease,
                                            min_impurity_split)
 
-        builder.build(self.tree_, X, y, sample_weight, X_idx_sorted)
+        builder.build(self.tree_, X, y, categorical_classes, sample_weight, X_idx_sorted)
 
         if self.n_outputs_ == 1 and is_classifier(self):
             self.n_classes_ = self.n_classes_[0]
@@ -832,7 +847,7 @@ class DecisionTreeClassifier(ClassifierMixin, BaseDecisionTree):
             presort=presort,
             ccp_alpha=ccp_alpha)
 
-    def fit(self, X, y, sample_weight=None, check_input=True,
+    def fit(self, X, y, categorical_features=None, sample_weight=None, check_input=True,
             X_idx_sorted=None):
         """Build a decision tree classifier from the training set (X, y).
 
@@ -845,6 +860,9 @@ class DecisionTreeClassifier(ClassifierMixin, BaseDecisionTree):
 
         y : array-like of shape (n_samples,) or (n_samples, n_outputs)
             The target values (class labels) as integers or strings.
+
+        categorical_features : array-like of shape (n_features,).
+            Indicates which features are categorical.
 
         sample_weight : array-like of shape (n_samples,), default=None
             Sample weights. If None, then samples are equally weighted. Splits
@@ -871,6 +889,7 @@ class DecisionTreeClassifier(ClassifierMixin, BaseDecisionTree):
 
         super().fit(
             X, y,
+            categorical_features=categorical_features,
             sample_weight=sample_weight,
             check_input=check_input,
             X_idx_sorted=X_idx_sorted)
