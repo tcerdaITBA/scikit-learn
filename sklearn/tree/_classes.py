@@ -59,7 +59,7 @@ __all__ = ["DecisionTreeClassifier",
 DTYPE = _tree.DTYPE
 DOUBLE = _tree.DOUBLE
 
-CRITERIA_CLF = {"gini": _criterion.Gini, "entropy": _criterion.Entropy}
+CRITERIA_CLF = {"absolute_error": _criterion.AbsoluteErrorRate, "gini": _criterion.Gini, "entropy": _criterion.Entropy}
 CRITERIA_REG = {"mse": _criterion.MSE, "friedman_mse": _criterion.FriedmanMSE,
                 "mae": _criterion.MAE}
 
@@ -142,8 +142,6 @@ class BaseDecisionTree(MultiOutputMixin, BaseEstimator, metaclass=ABCMeta):
 
         random_state = check_random_state(self.random_state)
 
-        categorical_classes = np.zeros(X.shape[1], dtype='int64')
-
         if categorical_features is None:
           categorical_features = np.empty(0)  # empty array
 
@@ -165,6 +163,8 @@ class BaseDecisionTree(MultiOutputMixin, BaseEstimator, metaclass=ABCMeta):
                 if X.indices.dtype != np.intc or X.indptr.dtype != np.intc:
                     raise ValueError("No support for np.int64 index based "
                                      "sparse matrices")
+
+        categorical_classes = np.zeros(X.shape[1], dtype='int64')
 
         for feature in range(X.shape[1]):
           if feature in categorical_features:
@@ -606,7 +606,8 @@ class DecisionTreeClassifier(ClassifierMixin, BaseDecisionTree):
     ----------
     criterion : str, optional (default="gini")
         The function to measure the quality of a split. Supported criteria are
-        "gini" for the Gini impurity and "entropy" for the information gain.
+        "absolute_error" for the absolute error rate, "gini" for the Gini
+        impurity and "entropy" for the information gain.
 
     splitter : str, optional (default="best")
         The strategy used to choose the split at each node. Supported
